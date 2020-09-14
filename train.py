@@ -118,7 +118,7 @@ def train_predict(encoder, decoder):
 
         img_show, _ = val_loader.dataset.imshow(batch)
         features = encoder(imgs).unsqueeze(1)
-        output = decoder.sample(features)
+        output = decoder.test_sample(features)
         generated_cap = val_loader.dataset.display_generated_caption(output)
 
         plt.axis('off')

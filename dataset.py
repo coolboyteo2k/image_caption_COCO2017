@@ -9,22 +9,26 @@ from tqdm.notebook import tqdm
 import random
 import matplotlib.pyplot as plt
 import json
+import pickle
+import os.path
 
 from vocab import Vocabulary
 
+
 class CoCoDataset(data.Dataset):
     def __init__(self, vocab_file, vocab_thres, start_word,
-               end_word, unk_word, annotations, vocab_from_file, img_folder, batch_size, mode, transform = None):
+                 end_word, unk_word, annotations, vocab_from_file, img_folder, batch_size, mode, transform=None):
         self.transform = transform
         self.mode = mode
         self.batch_size = batch_size
         self.vocab = Vocabulary(vocab_thres, vocab_file, start_word,
-                            end_word, unk_word, annotations, vocab_from_file)
+                                end_word, unk_word, annotations, vocab_from_file)
         self.img_folder = img_folder
         if self.mode == 'train' or self.mode == 'val':
             self.coco = COCO(annotations)
             self.idxs = list(self.coco.anns.keys())
-            vocab_tokens = [nltk.tokenize.word_tokenize(str(self.coco.anns[self.idxs[id]]['caption']).lower()) for id in tqdm(np.arange(len(self.idxs)))]
+            vocab_tokens = [nltk.tokenize.word_tokenize(str(
+                self.coco.anns[self.idxs[id]]['caption']).lower()) for id in tqdm(np.arange(len(self.idxs)))]
             self.cap_len = [len(token) for token in vocab_tokens]
         else:
             test_load = json.load(open(annotations).read())
@@ -33,16 +37,19 @@ class CoCoDataset(data.Dataset):
     def __getitem__(self, idx):
         if self.mode == 'train' or self.mode == 'val':
             anno_id = self.idxs[idx]
-            caption  = self.coco.anns[anno_id]['caption']
+            caption = self.coco.anns[anno_id]['caption']
             img_id = self.coco.anns[anno_id]['image_id']
-            path = self.coco.loadImgs(img_id)[0]['file_name'] # 'file_name': '000000380706.jpg'
+            # 'file_name': '000000380706.jpg'
+            path = self.coco.loadImgs(img_id)[0]['file_name']
 
-            image = Image.open(os.path.join(self.img_folder, path)).convert('RGB')
+            image = Image.open(os.path.join(
+                self.img_folder, path)).convert('RGB')
             if self.transform is not None:
                 image = self.transform(image)
 
             # Convert caption to tensor of word idxs
-            tokens = nltk.tokenize.word_tokenize(str(caption).lower()) # list of 1 caption-token or more
+            tokens = nltk.tokenize.word_tokenize(
+                str(caption).lower())  # list of 1 caption-token or more
 
             tokens_idx = []
             tokens_idx.append(self.vocab(self.vocab.start_word))
@@ -58,10 +65,11 @@ class CoCoDataset(data.Dataset):
             img_dict['captions_idx'] = tokens_idx
             img_dict['cap_len'] = tokens_len
             return img_dict
-      
+
         else:
             path = self.paths[idx]
-            PIL_img = Image.open(os.path.join(self.img_folder, path)).convert('RGB')
+            PIL_img = Image.open(os.path.join(
+                self.img_folder, path)).convert('RGB')
             orig_img = np.array(PIL_img)
             image = self.transform(PIL_img)
             return orig_image, image
@@ -72,9 +80,9 @@ class CoCoDataset(data.Dataset):
             caption.append(self.vocab.itos(i))
             # if i == self.vocab(self.vocab.end_word):
             #     break
-        
+
         caption = ' '.join(caption[1:-1])
-        caption = captioon.capitalize()
+        caption = caption.capitalize()
         return caption
 
     def imshow(self, img_dict):
@@ -84,7 +92,7 @@ class CoCoDataset(data.Dataset):
         length = img_dict['cap_len']
         if self.mode == 'val':
             img = img.squeeze()
-        np_img = np.array(img).transpose((1,2,0))
+        np_img = np.array(img).transpose((1, 2, 0))
         mean = np.array([0.485, 0.456, 0.406])
         std = np.array([0.229, 0.224, 0.225])
         np_img = np_img*std + mean
@@ -92,13 +100,13 @@ class CoCoDataset(data.Dataset):
 
         return img_show, caps
 
-
     def get_train_indices(self):
         sel_length = np.random.choice(self.cap_len)
-        all_indices = np.where([self.cap_len[i] == sel_length for i in np.arange(len(self.cap_len))])[0]
-        indices = list(np.random.choice(all_indices, size = self.batch_size))
+        all_indices = np.where(
+            [self.cap_len[i] == sel_length for i in np.arange(len(self.cap_len))])[0]
+        indices = list(np.random.choice(all_indices, size=self.batch_size))
         return indices
-    
+
     def __len__(self):
         if self.mode == 'train' or self.mode == 'val':
             return len(self.idxs)
