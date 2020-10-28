@@ -14,21 +14,22 @@ from pycocotools.coco import COCO
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('..')
+sys.path.append('.')
 
+ #     captions_annFile_train = 'annotations/captions_train2017.json'
+ #     coco_caps = COCO(captions_annFile_train)
+ #     train_samples = process_data(captions_annFile_train)
+ #     assert len(os.listdir('./train2017')
+ #                ) == train_samples, 'Make sure to have full images in images/train2017'
+ # os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
 nltk.download('punkt')
-
-
-# os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
-
-captions_annFile_train = 'captions_train2017.json'
+captions_annFile_train = 'annotations/captions_train2017.json'
 coco_caps = COCO(captions_annFile_train)
 
-# Number of images that have annos
+ # Number of images that have annos
 train_samples = process_data(captions_annFile_train)
 
-
-# -----------------------------------------------------------------------
+ # -----------------------------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -50,23 +51,23 @@ data_transform = {
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 
-    "val": transforms.Compose([
+"val": transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 
-    "test": transforms.Compose([
+"test": transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 }
 train_loader = DataLoader(transform=data_transform['train'], mode='train',
-                          vocab_from_file=False, batch_size=BATCH_SIZE, cocoapi='/content/drive/My Drive/opt')
+                            vocab_from_file=False, batch_size=BATCH_SIZE)
 
 val_loader = DataLoader(transform=data_transform['val'], mode='val',
-                        vocab_from_file=True, cocoapi='/content/drive/My Drive/opt')
+                           vocab_from_file=True, batch_size=BATCH_SIZE)
 
 
 def visualize(data_loader):
@@ -83,17 +84,17 @@ def visualize(data_loader):
         plt.title(caps)
         plt.axis('off')
     plt.show()
+
 # visualize(train_loader)
 
-
-assert len(os.listdir('/content/drive/My Drive/opt/cocoapi/images/train2017')
-           ) == train_samples, 'Make sure to have full images in images/train2017'
+# assert len(os.listdir('/train2017')
+#            ) == train_samples, 'Make sure to have full images in images/train2017'
 
 # prepare training
 VOCAB_SIZE = len(train_loader.dataset.vocab)
 
-encoder = EncoderCNN(EMBED_SIZE).to(device)
-decoder = DecoderRNN(EMBED_SIZE, HIDDEN_SIZE, VOCAB_SIZE).to(device)
+encoder = EncoderCNN(EMBED_SIZE)  # .to(device)
+decoder = DecoderRNN(EMBED_SIZE, HIDDEN_SIZE, VOCAB_SIZE)  # .to(device)
 print('Encoder:\n', encoder)
 print('Decoder:\n', decoder)
 all_params = list(encoder.linear.parameters()) + \
@@ -103,9 +104,9 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(params=all_params, lr=1e-05)
 total_step = math.ceil(len(train_loader.dataset.cap_len) / BATCH_SIZE)
 
-model_save_path = '/content/drive/My Drive/opt/checkpoint'
-os.makedirs(model_save_path, exist_ok=True)
-
+model_save_path = '/checkpoint'
+if not os.path.exists(model_save_path):
+    os.makedirs(model_save_path, exist_ok=True)
 
 def train_predict(encoder, decoder):
     encoder.eval()
@@ -114,13 +115,14 @@ def train_predict(encoder, decoder):
     with torch.no_grad():
         rand = np.random.randint(1000)
         batch = val_loader.dataset[rand]
-        imgs = batch['image'].unsqueeze(0).to(device)
+        imgs = batch['image'].unsqueeze(0)  # .to(device)
         caps = batch['captions']
 
         img_show, _ = val_loader.dataset.imshow(batch)
         features = encoder(imgs).unsqueeze(1)
         output = decoder.test_sample(features)
-        generated_cap = val_loader.dataset.display_generated_caption(output)
+        generated_cap = val_loader.dataset.display_generated_caption(
+            output)
 
         plt.axis('off')
         plt.imshow(img_show)
@@ -131,9 +133,7 @@ def train_predict(encoder, decoder):
     encoder.train()
     decoder.train()
 
-
-num_epochs = 4
-
+num_epochs = 3
 
 def train(encoder, decoder, optimizer, criterion, train_loader):
     running_loss = 0.0
@@ -150,18 +150,18 @@ def train(encoder, decoder, optimizer, criterion, train_loader):
             encoder.zero_grad()
             decoder.zero_grad()
 
-            imgs = batch_dict['image'].to(device)
+            imgs = batch_dict['image']  # .to(device)
             caps = batch_dict['captions_idx']
 
             # caps_target will not change when caps change - create a copy of caps
-            caps_target = caps[:, :].to(device)
-            caps_train = caps.to(device)
+            caps_target = caps[:, :]  # .to(device)
+            caps_train = caps  # .to(device)
 
             features = encoder(imgs)
             output = decoder(features, caps_train)
 
             loss = criterion(output.view(-1, VOCAB_SIZE),
-                             caps_target.contiguous().view(-1))
+                                caps_target.contiguous().view(-1))
             # perplexity is a metric for image caption
             perplexity = np.exp(loss.item())
             loss.backward()
@@ -178,28 +178,28 @@ def train(encoder, decoder, optimizer, criterion, train_loader):
                 if perplexity < perplexity_thres:
                     perplexity_thres = perplexity
                     torch.save(encoder.state_dict(
-                    ), '/content/drive/My Drive/opt/checkpoint/encoder_best.pt')
+                    ), '/checkpoint/encoder_best.pt')
                     torch.save(decoder.state_dict(
-                    ), '/content/drive/My Drive/opt/checkpoint/decoder_best.pt')
+                    ), '/checkpoint/decoder_best.pt')
                 else:
                     torch.save(encoder.state_dict(
-                    ), f'/content/drive/My Drive/opt/checkpoint/encoder_resnet_{epoch+1}_{id+1}.pt')
+                    ), f'/checkpoint/encoder_resnet_{epoch+1}_{id+1}.pt')
                     torch.save(decoder.state_dict(
-                    ), f'/content/drive/My Drive/opt/checkpoint/decoder_resnet_{epoch+1}_{id+1}.pt')
+                    ), f'/checkpoint/decoder_resnet_{epoch+1}_{id+1}.pt')
 
-                print('Saved model!')
+                    print('Saved model!')
 
     return encoder, decoder
 
-
 # Train
-encoder, decoder = train(encoder, decoder, optimizer, criterion, train_loader)
+encoder, decoder = train(
+    encoder, decoder, optimizer, criterion, train_loader)
 
 # Load model
 encoder.load_state_dict(torch.load(
-    '/content/drive/My Drive/opt/checkpoint/encoder_best.pt'))
+    '/checkpoint/encoder_best.pt'))
 decoder.load_state_dict(torch.load(
-    '/content/drive/My Drive/opt/checkpoint/decoder_best.pt'))
+    '/checkpoint/decoder_best.pt'))
 
 # Load test images + annos
 test_loader = DataLoader(
@@ -208,25 +208,23 @@ data_iter = next(iter(test_loader))
 
 # Prepare to plot test image
 
-
 def get_sentences(original_img, all_preds):
     sentence = ' '
     plt.imshow(original_img.squeeze())
 
     return sentence.join([test_loader.dataset.vocab.idx2word[idx] for idx in all_preds[1:-1]])
 
-
 def visualize_test_images(encoder, decoder):
-    encoder.to(device)
-    decoder.to(device)
+    # encoder.to(device)
+    # decoder.to(device)
     encoder.eval()
     decoder.eval()
 
     original_img, transform_img = next(data_iter)
-    features = encoder(transform_img.to(device)).unsqueeze(1)
+    features = encoder(transform_img).unsqueeze(
+        1)  # transform_img.to(device)
     final_output = decoder.test_sample(features, max_len=20)
 
     get_sentences(original_img, final_output)
-
 
 visualize_test_images(encoder, decoder)

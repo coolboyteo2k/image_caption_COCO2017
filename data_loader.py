@@ -12,8 +12,8 @@ import json
 from dataset import CoCoDataset
 
 
-def DataLoader(vocab_file='cocoapi/data/vocab.pkl', vocab_thres=8, start_word='<start>',
-               end_word='<end>', unk_word='<unk>', vocab_from_file=True, cocoapi='/opt',
+def DataLoader(vocab_file='data/vocab.pkl', vocab_thres=8, start_word='<start>',
+               end_word='<end>', unk_word='<unk>', vocab_from_file=True, cocoapi='',
                num_workers=0, pin_memory=False, batch_size=32, mode='train', transform=None):
 
     assert mode in ['train', 'test', 'val']
@@ -24,21 +24,21 @@ def DataLoader(vocab_file='cocoapi/data/vocab.pkl', vocab_thres=8, start_word='<
         if vocab_from_file == True:
             assert os.path.exists(
                 vocab_file),  'If True, load vocab from from existing vocab_file, if it exists'
-        img_folder = os.path.join(cocoapi, 'cocoapi/images/train2017')
+        img_folder = os.path.join(cocoapi, 'train2017')
         annotations = os.path.join(
-            cocoapi, 'cocoapi/annotations/captions_train2017.json')
+            cocoapi, 'annotations/captions_train2017.json')
 
     elif mode == 'test':
         assert os.path.exists(vocab_file), 'vocab.pkl must exist'
         assert vocab_from_file == True, 'change to True'
-        img_folder = os.path.join(cocoapi, 'cocoapi/images/test2017')
+        img_folder = os.path.join(cocoapi, 'test2017')
         annotations = os.path.join(
-            cocoapi, 'cocoapi/annotations/image_info_test2017.json')
+            cocoapi, 'annotations/image_info_test2017.json')
 
     elif mode == 'val':
-        img_folder = os.path.join(cocoapi, 'cocoapi/images/val2017')
+        img_folder = os.path.join(cocoapi, 'val2017')
         annotations = os.path.join(
-            cocoapi, 'cocoapi/annotations/captions_val2017.json')
+            cocoapi, 'annotations/captions_val2017.json')
 
     vocab_file = os.path.join(cocoapi, vocab_file)
     dataset = CoCoDataset(vocab_file, vocab_thres, start_word, end_word,

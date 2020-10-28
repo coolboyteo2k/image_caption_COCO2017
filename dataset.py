@@ -5,7 +5,7 @@ import torch.utils.data as data
 from PIL import Image
 from pycocotools.coco import COCO
 import numpy as np
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import random
 import matplotlib.pyplot as plt
 import json
@@ -35,7 +35,7 @@ class CoCoDataset(data.Dataset):
 
         else:
             test_load = json.load(open(annotations).read())
-            self.paths = [path['file_name'] for path in paths['images']]
+            self.paths = [path['file_name'] for path in test_load['images']]
 
     def __getitem__(self, idx):
         if self.mode == 'train' or self.mode == 'val':
