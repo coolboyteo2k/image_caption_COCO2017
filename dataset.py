@@ -21,15 +21,18 @@ class CoCoDataset(data.Dataset):
         self.transform = transform
         self.mode = mode
         self.batch_size = batch_size
+        self.img_folder = img_folder
+
         self.vocab = Vocabulary(vocab_thres, vocab_file, start_word,
                                 end_word, unk_word, annotations, vocab_from_file)
-        self.img_folder = img_folder
+
         if self.mode == 'train' or self.mode == 'val':
             self.coco = COCO(annotations)
             self.idxs = list(self.coco.anns.keys())
             vocab_tokens = [nltk.tokenize.word_tokenize(str(
                 self.coco.anns[self.idxs[id]]['caption']).lower()) for id in tqdm(np.arange(len(self.idxs)))]
             self.cap_len = [len(token) for token in vocab_tokens]
+
         else:
             test_load = json.load(open(annotations).read())
             self.paths = [path['file_name'] for path in paths['images']]
@@ -72,7 +75,7 @@ class CoCoDataset(data.Dataset):
                 self.img_folder, path)).convert('RGB')
             orig_img = np.array(PIL_img)
             image = self.transform(PIL_img)
-            return orig_image, image
+            return orig_img, image
 
     def display_generated_caption(self, output):
         caption = []

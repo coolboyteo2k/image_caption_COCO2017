@@ -1,24 +1,25 @@
-import skimage.io as io
 from read_json import process_data
 from data_loader import DataLoader
 from model import EncoderCNN, DecoderRNN
 from torchvision import transforms
+from tqdm import tqdm
+import skimage.io as io
+import torch
+import torch.utils.data as data
+import torch.nn as nn
 import nltk
 import math
 import os
-import sys
 from pycocotools.coco import COCO
-import urllib
-import zipfile
-import json
-from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+import sys
+sys.path.append('..')
+
 nltk.download('punkt')
 
 
-os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
+# os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
 
 captions_annFile_train = 'captions_train2017.json'
 coco_caps = COCO(captions_annFile_train)
@@ -28,7 +29,7 @@ train_samples = process_data(captions_annFile_train)
 
 
 # -----------------------------------------------------------------------
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
 BATCH_SIZE = 32
