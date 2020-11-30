@@ -9,7 +9,7 @@ from tqdm.notebook import tqdm
 import random
 import matplotlib.pyplot as plt
 import json
-from dataset import CoCoDataset
+from datasets.dataset import CoCoDataset
 
 
 def DataLoader(vocab_file='data/vocab.pkl', vocab_thres=8, start_word='<start>',

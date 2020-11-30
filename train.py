@@ -1,6 +1,6 @@
-from read_json import process_data
-from data_loader import DataLoader
-from model import EncoderCNN, DecoderRNN
+from utils.read_json import process_data
+from dataloader.data_loader import DataLoader
+from model.model import EncoderCNN, DecoderRNN
 from torchvision import transforms
 from tqdm import tqdm
 import skimage.io as io
@@ -16,20 +16,20 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append('.')
 
- #     captions_annFile_train = 'annotations/captions_train2017.json'
- #     coco_caps = COCO(captions_annFile_train)
- #     train_samples = process_data(captions_annFile_train)
- #     assert len(os.listdir('./train2017')
- #                ) == train_samples, 'Make sure to have full images in images/train2017'
- # os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
+#     captions_annFile_train = 'annotations/captions_train2017.json'
+#     coco_caps = COCO(captions_annFile_train)
+#     train_samples = process_data(captions_annFile_train)
+#     assert len(os.listdir('./train2017')
+#                ) == train_samples, 'Make sure to have full images in images/train2017'
+# os.chdir('/content/drive/My Drive/opt/cocoapi/annotations')
 nltk.download('punkt')
 captions_annFile_train = 'annotations/captions_train2017.json'
 coco_caps = COCO(captions_annFile_train)
 
- # Number of images that have annos
+# Number of images that have annos
 train_samples = process_data(captions_annFile_train)
 
- # -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -51,23 +51,23 @@ data_transform = {
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 
-"val": transforms.Compose([
+    "val": transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 
-"test": transforms.Compose([
+    "test": transforms.Compose([
         transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 }
 train_loader = DataLoader(transform=data_transform['train'], mode='train',
-                            vocab_from_file=False, batch_size=BATCH_SIZE)
+                          vocab_from_file=False, batch_size=BATCH_SIZE)
 
 val_loader = DataLoader(transform=data_transform['val'], mode='val',
-                           vocab_from_file=True, batch_size=BATCH_SIZE)
+                        vocab_from_file=True, batch_size=BATCH_SIZE)
 
 
 def visualize(data_loader):
@@ -90,6 +90,7 @@ def visualize(data_loader):
 # assert len(os.listdir('/train2017')
 #            ) == train_samples, 'Make sure to have full images in images/train2017'
 
+
 # prepare training
 VOCAB_SIZE = len(train_loader.dataset.vocab)
 
@@ -107,6 +108,7 @@ total_step = math.ceil(len(train_loader.dataset.cap_len) / BATCH_SIZE)
 model_save_path = '/checkpoint'
 if not os.path.exists(model_save_path):
     os.makedirs(model_save_path, exist_ok=True)
+
 
 def train_predict(encoder, decoder):
     encoder.eval()
@@ -133,7 +135,9 @@ def train_predict(encoder, decoder):
     encoder.train()
     decoder.train()
 
+
 num_epochs = 3
+
 
 def train(encoder, decoder, optimizer, criterion, train_loader):
     running_loss = 0.0
@@ -161,7 +165,7 @@ def train(encoder, decoder, optimizer, criterion, train_loader):
             output = decoder(features, caps_train)
 
             loss = criterion(output.view(-1, VOCAB_SIZE),
-                                caps_target.contiguous().view(-1))
+                             caps_target.contiguous().view(-1))
             # perplexity is a metric for image caption
             perplexity = np.exp(loss.item())
             loss.backward()
@@ -191,6 +195,7 @@ def train(encoder, decoder, optimizer, criterion, train_loader):
 
     return encoder, decoder
 
+
 # Train
 encoder, decoder = train(
     encoder, decoder, optimizer, criterion, train_loader)
@@ -208,11 +213,13 @@ data_iter = next(iter(test_loader))
 
 # Prepare to plot test image
 
+
 def get_sentences(original_img, all_preds):
     sentence = ' '
     plt.imshow(original_img.squeeze())
 
     return sentence.join([test_loader.dataset.vocab.idx2word[idx] for idx in all_preds[1:-1]])
+
 
 def visualize_test_images(encoder, decoder):
     # encoder.to(device)
@@ -226,5 +233,6 @@ def visualize_test_images(encoder, decoder):
     final_output = decoder.test_sample(features, max_len=20)
 
     get_sentences(original_img, final_output)
+
 
 visualize_test_images(encoder, decoder)

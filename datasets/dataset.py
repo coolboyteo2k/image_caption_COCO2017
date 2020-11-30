@@ -12,7 +12,7 @@ import json
 import pickle
 import os.path
 
-from vocab import Vocabulary
+from datasets.vocab import Vocabulary
 
 
 class CoCoDataset(data.Dataset):
